@@ -1,0 +1,11 @@
+{
+    "C_Cpp.default.includePath": [
+        "/mnt/d/Github/Physics/emscripten-core/emscripten/system/include/",
+        "/mnt/d/Github/physics/NvGameWorks/physx-js/node_modules/physx/pxshared/include",
+        "/mnt/d/Github/physics/NvGameWorks/physx-js/node_modules/physx/physx/include",
+        "/mnt/d/Github/physics/NvGameWorks/physx-js/node_modules/physx/physx/source/foundation/include",
+    ],
+    "files.associations": {
+        "random": "cpp"
+    }
+}

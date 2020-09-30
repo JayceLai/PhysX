@@ -420,6 +420,8 @@ NpMaterial* NpPhysics::addMaterial(NpMaterial* m)
 PxMaterial* NpPhysics::createMaterial(PxReal staticFriction, PxReal dynamicFriction, PxReal restitution)
 {
 	PxMaterial* m = NpFactory::getInstance().createMaterial(staticFriction, dynamicFriction, restitution);
+	m->setFrictionCombineMode(PxCombineMode::Enum::eMULTIPLY);
+	m->setRestitutionCombineMode(PxCombineMode::Enum::eMULTIPLY);
 	return addMaterial(static_cast<NpMaterial*>(m));
 }
 
