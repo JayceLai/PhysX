@@ -77,12 +77,12 @@ struct PxSimulationEventCallbackWrapper : public wrapper<PxSimulationEventCallba
       if (cp.flags & (PxContactPairFlag::eREMOVED_SHAPE_0 | PxContactPairFlag::eREMOVED_SHAPE_1))
           continue;
 
-      if(cp.events & PxPairFlag::eNOTIFY_TOUCH_FOUND) {
+      if (cp.events & PxPairFlag::eNOTIFY_TOUCH_PERSISTS) {
+        call<void>("onContactPersist", cp.shapes[0], cp.shapes[1]);
+      } else if(cp.events & PxPairFlag::eNOTIFY_TOUCH_FOUND) {
         call<void>("onContactBegin", cp.shapes[0], cp.shapes[1]);
       } else if(cp.events & PxPairFlag::eNOTIFY_TOUCH_LOST) {
         call<void>("onContactEnd", cp.shapes[0], cp.shapes[1]);
-      } else if(cp.events & PxPairFlag::eNOTIFY_TOUCH_PERSISTS) {
-        call<void>("onContactPersist", cp.shapes[0], cp.shapes[1]);
       }
     }
   }
@@ -93,7 +93,9 @@ struct PxSimulationEventCallbackWrapper : public wrapper<PxSimulationEventCallba
       if (tp.flags & (PxTriggerPairFlag::eREMOVED_SHAPE_TRIGGER | PxTriggerPairFlag::eREMOVED_SHAPE_OTHER))
           continue;
 
-      if(tp.status & PxPairFlag::eNOTIFY_TOUCH_FOUND) {
+      if (tp.status & PxPairFlag::eNOTIFY_TOUCH_PERSISTS) {
+        call<void>("onTriggerPersist", tp.triggerShape, tp.otherShape);
+      } else if(tp.status & PxPairFlag::eNOTIFY_TOUCH_FOUND) {
         call<void>("onTriggerBegin", tp.triggerShape, tp.otherShape);
       } else if(tp.status & PxPairFlag::eNOTIFY_TOUCH_LOST) {
         call<void>("onTriggerEnd", tp.triggerShape, tp.otherShape);
@@ -116,11 +118,19 @@ PxFilterFlags DefaultFilterShader(
   // trigger filter
   if(PxFilterObjectIsTrigger(attributes0) || PxFilterObjectIsTrigger(attributes1))
   {
-    pairFlags = PxPairFlag::eTRIGGER_DEFAULT | PxPairFlag::eDETECT_CCD_CONTACT;
+    pairFlags = PxPairFlag::eTRIGGER_DEFAULT | 
+                PxPairFlag::eNOTIFY_TOUCH_FOUND | 
+                PxPairFlag::eNOTIFY_TOUCH_LOST | 
+                PxPairFlag::eNOTIFY_TOUCH_PERSISTS | 
+                PxPairFlag::eDETECT_CCD_CONTACT;
     return PxFilterFlag::eDEFAULT;
   }
   // simple collision process
-  pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST | PxPairFlag::eNOTIFY_TOUCH_PERSISTS |PxPairFlag::eDETECT_CCD_CONTACT;
+  pairFlags = PxPairFlag::eCONTACT_DEFAULT | 
+              PxPairFlag::eNOTIFY_TOUCH_FOUND | 
+              PxPairFlag::eNOTIFY_TOUCH_LOST | 
+              PxPairFlag::eNOTIFY_TOUCH_PERSISTS | 
+              PxPairFlag::eDETECT_CCD_CONTACT;
   return PxFilterFlag::eDEFAULT;
 }
 
