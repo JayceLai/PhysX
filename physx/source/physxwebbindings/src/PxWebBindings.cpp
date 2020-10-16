@@ -77,6 +77,22 @@ struct PxSimulationEventCallbackWrapper : public wrapper<PxSimulationEventCallba
       if (cp.flags & (PxContactPairFlag::eREMOVED_SHAPE_0 | PxContactPairFlag::eREMOVED_SHAPE_1))
           continue;
 
+      // std::vector<PxContactPairPoint> contactPoints;
+      
+      // for(PxU32 i=0;i<nbPairs;i++)
+      // {
+      //   PxU32 contactCount = pairs[i].contactCount;
+      //   if(contactCount)
+      //   {
+      //     contactPoints.resize(contactCount);
+      //     pairs[i].extractContacts(&contactPoints[0], contactCount);
+
+      //     for(PxU32 j=0;j<contactCount;j++)
+      //     {
+      //     }
+      //   }
+      // }
+
       if (cp.events & PxPairFlag::eNOTIFY_TOUCH_PERSISTS) {
         call<void>("onContactPersist", cp.shapes[0], cp.shapes[1]);
       } else if(cp.events & PxPairFlag::eNOTIFY_TOUCH_FOUND) {
@@ -94,11 +110,11 @@ struct PxSimulationEventCallbackWrapper : public wrapper<PxSimulationEventCallba
           continue;
 
       if (tp.status & PxPairFlag::eNOTIFY_TOUCH_PERSISTS) {
-        call<void>("onTriggerPersist", tp.triggerShape, tp.otherShape);
+        call<void>("onTriggerPersist", tp.triggerShape, tp.otherShape, tp.triggerActor, tp.otherActor);
       } else if(tp.status & PxPairFlag::eNOTIFY_TOUCH_FOUND) {
-        call<void>("onTriggerBegin", tp.triggerShape, tp.otherShape);
+        call<void>("onTriggerBegin", tp.triggerShape, tp.otherShape, tp.triggerActor, tp.otherActor);
       } else if(tp.status & PxPairFlag::eNOTIFY_TOUCH_LOST) {
-        call<void>("onTriggerEnd", tp.triggerShape, tp.otherShape);
+        call<void>("onTriggerEnd", tp.triggerShape, tp.otherShape, tp.triggerActor, tp.otherActor);
       }
     }
   }

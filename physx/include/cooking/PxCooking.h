@@ -302,7 +302,7 @@ struct PxCookingParams
 		buildTriangleAdjacencies		(false),
 		buildGPUData					(false),
 		scale							(sc),
-		meshPreprocessParams			(0),
+		meshPreprocessParams			(2),
 		meshWeldTolerance				(0.f),
 		gaussMapLimit					(32)
 	{
