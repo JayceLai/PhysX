@@ -210,6 +210,33 @@ PxTriangleMesh* createTriMesh(int vertices, PxU32 vertCount, int indices, PxU32 
   return triangleMesh;
 }
 
+PxTriangleMesh* createTriMeshExt(std::vector<PxVec3>& vertices, std::vector<PxU16>& indices, PxCooking& cooking, PxPhysics& physics) {
+  PxTriangleMeshDesc meshDesc;
+  meshDesc.points.count           = vertices.size();
+  meshDesc.points.stride          = sizeof(PxVec3);
+  meshDesc.points.data            = (PxVec3*)vertices.data();
+
+  meshDesc.triangles.count        = indices.size()/3;
+  meshDesc.triangles.stride       = 3*sizeof(PxU16);
+  meshDesc.triangles.data         = (PxU16*)indices.data();
+  meshDesc.flags                  = PxMeshFlag::e16_BIT_INDICES;
+
+  PxTriangleMesh* triangleMesh = cooking.createTriangleMesh(meshDesc, physics.getPhysicsInsertionCallback());
+  return triangleMesh;
+}
+
+PxHeightField* createHeightFieldExt(PxU32 numCols, PxU32 numRows, std::vector<PxHeightFieldSample>& samples, PxCooking& cooking, PxPhysics& physics) {
+  PxHeightFieldDesc hfDesc;
+  // hfDesc.format             = PxHeightFieldFormat::eS16_TM;
+  hfDesc.nbColumns          = numCols;
+  hfDesc.nbRows             = numRows;
+  hfDesc.samples.data       = samples.data();
+  hfDesc.samples.stride     = sizeof(PxHeightFieldSample);
+
+  PxHeightField* heightField = cooking.createHeightField(hfDesc, physics.getPhysicsInsertionCallback());
+  return heightField;
+}
+
 EMSCRIPTEN_BINDINGS(physx)
 {
 
@@ -221,7 +248,11 @@ EMSCRIPTEN_BINDINGS(physx)
   function("PxInitExtensions", &PxInitExtensions, allow_raw_pointers());
   function("PxDefaultCpuDispatcherCreate", &PxDefaultCpuDispatcherCreate, allow_raw_pointers());
   function("PxCreatePvd", &PxCreatePvd, allow_raw_pointers());
-  function("PxCreatePhysics", &PxCreateBasePhysics, allow_raw_pointers());
+  function("PxCreateBasePhysics", &PxCreateBasePhysics, allow_raw_pointers());
+  function("PxCreatePhysics", &PxCreatePhysics, allow_raw_pointers());
+  function("PxRegisterArticulations", &PxRegisterArticulations, allow_raw_pointers());
+  function("PxRegisterArticulationsReducedCoordinate", &PxRegisterArticulationsReducedCoordinate, allow_raw_pointers());
+  function("PxRegisterHeightFields", &PxRegisterHeightFields, allow_raw_pointers());
   function("PxCreateCooking", &PxCreateCooking, allow_raw_pointers());
   function("PxCreatePlane", &PxCreatePlane, allow_raw_pointers());
   function("getDefaultSceneDesc", &getDefaultSceneDesc, allow_raw_pointers());
@@ -444,6 +475,19 @@ EMSCRIPTEN_BINDINGS(physx)
   class_<PxErrorCallback>("PxErrorCallback");
   class_<PxDefaultErrorCallback, base<PxErrorCallback>>("PxDefaultErrorCallback").constructor<>();
 
+  class_<PxBitAndByte>("PxBitAndByte")
+    .function("isBitSet", &PxBitAndByte::isBitSet)
+    .function("setBit", &PxBitAndByte::setBit)
+    .function("clearBit", &PxBitAndByte::clearBit);
+
+  class_<PxHeightFieldSample>("PxHeightFieldSample")
+      .constructor()
+      .property("height", &PxHeightFieldSample::height)
+      .property("materialIndex0", &PxHeightFieldSample::materialIndex0)
+      .property("materialIndex1", &PxHeightFieldSample::materialIndex1);
+  register_vector<PxHeightFieldSample>("PxHeightFieldSampleVector");
+
+  register_vector<PxU16>("PxU16Vector");
   class_<PxCooking>("PxCooking")
       .function("createConvexMesh", optional_override(
                                         [](PxCooking& cooking, std::vector<PxVec3>& vertices, PxPhysics& physics) {
@@ -456,6 +500,14 @@ EMSCRIPTEN_BINDINGS(physx)
       .function("createTriMesh", optional_override(
                                         [](PxCooking& cooking, int vertices, PxU32 vertCount, int indices, PxU32 indexCount, bool isU16, PxPhysics& physics) {
                                           return createTriMesh(vertices, vertCount, indices, indexCount, isU16, cooking, physics);
+                                        }), allow_raw_pointers())
+      .function("createTriMeshExt", optional_override(
+                                        [](PxCooking& cooking, std::vector<PxVec3>& vertices, std::vector<PxU16>& indices, PxPhysics& physics) {
+                                          return createTriMeshExt(vertices, indices, cooking, physics);
+                                        }), allow_raw_pointers())
+      .function("createHeightFieldExt", optional_override(
+                                        [](PxCooking& cooking, PxU32 numCols, PxU32 numRows, std::vector<PxHeightFieldSample>& samples, PxPhysics& physics) {
+                                          return createHeightFieldExt(numCols, numRows, samples, cooking, physics);
                                         }), allow_raw_pointers());
   class_<PxCookingParams>("PxCookingParams").constructor<PxTolerancesScale>();
   class_<PxCpuDispatcher>("PxCpuDispatcher");
@@ -578,36 +630,46 @@ EMSCRIPTEN_BINDINGS(physx)
   
   class_<PxSphereGeometry, base<PxGeometry>>("PxSphereGeometry")
   .constructor<float>()
-  // .function("isValid", &PxSphereGeometry::isValid)
+  .function("isValid", &PxSphereGeometry::isValid)
   .property("radius", &PxSphereGeometry::radius);
 
   class_<PxCapsuleGeometry, base<PxGeometry>>("PxCapsuleGeometry")
   .constructor<float, float>()
-  // .function("isValid", &PxCapsuleGeometry::isValid)
+  .function("isValid", &PxCapsuleGeometry::isValid)
   .property("radius", &PxCapsuleGeometry::radius)
   .property("halfHeight", &PxCapsuleGeometry::halfHeight);
 
   class_<PxTriangleMesh>("PxTriangleMesh")
         .function("release", &PxTriangleMesh::release);
-  class_<PxTriangleMeshGeometry, base<PxGeometry>>("PxTriangleMeshGeometry").constructor<PxTriangleMesh*, const PxMeshScale&, PxMeshGeometryFlags>();
+    
+  class_<PxTriangleMeshGeometry, base<PxGeometry>>("PxTriangleMeshGeometry")
+  .constructor<PxTriangleMesh*, const PxMeshScale&, PxMeshGeometryFlags>()
+  .function("isValid", &PxTriangleMeshGeometry::isValid);
 
   class_<PxMeshGeometryFlags>("PxMeshGeometryFlags").constructor<int>();
   enum_<PxMeshGeometryFlag::Enum>("PxMeshGeometryFlag")
   .value("eDOUBLE_SIDED", PxMeshGeometryFlag::Enum::eDOUBLE_SIDED);
 
   class_<PxPlaneGeometry, base<PxGeometry>>("PxPlaneGeometry").constructor<>()
-  // .function("isValid", &PxPlaneGeometry::isValid)
-  ;
+  .function("isValid", &PxPlaneGeometry::isValid);
 
   class_<PxConvexMesh>("PxConvexMesh")
       .function("release", &PxConvexMesh::release);
-  class_<PxConvexMeshGeometry, base<PxGeometry>>("PxConvexMeshGeometry").constructor<PxConvexMesh*, const PxMeshScale&, PxConvexMeshGeometryFlags>();
+  class_<PxConvexMeshGeometry, base<PxGeometry>>("PxConvexMeshGeometry")
+  .constructor<PxConvexMesh*, const PxMeshScale&, PxConvexMeshGeometryFlags>()
+  .function("isValid", &PxConvexMeshGeometry::isValid);
 
   class_<PxMeshScale>("PxMeshScale").constructor<const PxVec3&, const PxQuat&>();
 
   class_<PxConvexMeshGeometryFlags>("PxConvexMeshGeometryFlags").constructor<int>();
   enum_<PxConvexMeshGeometryFlag::Enum>("PxConvexMeshGeometryFlag")
   .value("eTIGHT_BOUNDS", PxConvexMeshGeometryFlag::Enum::eTIGHT_BOUNDS);
+
+  class_<PxHeightField>("PxHeightField")
+      .function("release", &PxHeightField::release);
+  class_<PxHeightFieldGeometry, base<PxGeometry>>("PxHeightFieldGeometry")
+      .constructor<PxHeightField*, PxMeshGeometryFlags, PxReal, PxReal, PxReal>()
+      .function("isValid", &PxHeightFieldGeometry::isValid);
 
   /** End Geometry **/
 
@@ -786,6 +848,10 @@ void raw_destructor<PxControllerDesc>(PxControllerDesc *)
 template <>
 void raw_destructor<PxControllerManager>(PxControllerManager *)
 { /* do nothing */
+}
+template<> 
+void raw_destructor<PxHeightField>(PxHeightField *) 
+{ /* do nothing */ 
 }
 } // namespace internal
 } // namespace emscripten
