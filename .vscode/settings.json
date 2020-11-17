@@ -4,6 +4,7 @@
         "/mnt/d/Github/physics/NvGameWorks/physx-js/node_modules/physx/pxshared/include",
         "/mnt/d/Github/physics/NvGameWorks/physx-js/node_modules/physx/physx/include",
         "/mnt/d/Github/physics/NvGameWorks/physx-js/node_modules/physx/physx/source/foundation/include",
+        "/mnt/d/Github/physics/NvGameWorks/physx-js/node_modules/physx/physx/source/common/src",
     ],
     "files.associations": {
         "random": "cpp"

@@ -59,6 +59,19 @@ struct PxQueryFilterCallbackWrapper : public wrapper<PxQueryFilterCallback> {
     return call<PxQueryHitType::Enum>("postFilter", filterData, hit);
   }
   PxQueryHitType::Enum preFilter(const PxFilterData &filterData, const PxShape *shape, const PxRigidActor *actor, PxHitFlags&) {
+    // // group mask filter
+    // const PxFilterData &fd1 = shape->getQueryFilterData();
+    // if (!(filterData.word1 & fd1.word0))
+    // {
+    //   return PxQueryHitType::eNONE;
+    // }
+
+    // trigger filter
+    const PxShapeFlags &shapeFlags = shape->getFlags();
+    if (!filterData.word3 && shapeFlags & PxShapeFlag::eTRIGGER_SHAPE) {
+        return PxQueryHitType::eNONE;
+    }
+
     PxQueryHitType::Enum hitType = call<PxQueryHitType::Enum>("preFilter", filterData, shape, actor);
     return hitType;
   }
@@ -364,18 +377,44 @@ EMSCRIPTEN_BINDINGS(physx)
                                       bool fetched = scene.fetchResults(block);
                                       return fetched;
                                     }))
-      .function("raycast", &PxScene::raycast, allow_raw_pointers())
+      .function("raycast", optional_override(
+                                    [](PxScene &scene, const PxVec3& origin, const PxVec3& unitDir, const PxReal distance,
+									                    PxRaycastCallback& hitCall) {
+                                      bool fetched = scene.raycast(origin, unitDir, distance, hitCall);
+                                      return fetched;
+                                    }))
+      .function("raycastSingle", optional_override(
+                                    [](PxScene &scene, const PxVec3& origin, const PxVec3& unitDir, const PxReal distance,
+									                    PxU16 flags, PxRaycastHit& hit, const PxSceneQueryFilterData& filterData,
+										                  PxSceneQueryFilterCallback* filterCall, const PxSceneQueryCache* cache) {
+                                      bool result = PxSceneQueryExt::raycastSingle(scene, origin, unitDir, distance, PxHitFlags(flags), hit, filterData, nullptr, nullptr);
+                                      return result;
+                                    }), allow_raw_pointers())
+      .function("raycastAny", optional_override(
+                                    [](PxScene &scene, const PxVec3& origin, const PxVec3& unitDir, const PxReal distance, PxRaycastHit& hit, const PxSceneQueryFilterData& filterData,
+										                  PxSceneQueryFilterCallback* filterCall, const PxSceneQueryCache* cache) {
+                                      return PxSceneQueryExt::raycastAny(scene, origin, unitDir, distance, hit, filterData, filterCall, cache);;
+                                    }), allow_raw_pointers())
+      .function("raycastMultiple", optional_override(
+                                    [](PxScene &scene, const PxVec3& origin, const PxVec3& unitDir, const PxReal distance,
+									                    PxU16 flags, std::vector<PxRaycastHit>& hitBuffer, PxU32 hbsize, const PxSceneQueryFilterData& filterData,
+										                  PxSceneQueryFilterCallback* filterCall, const PxSceneQueryCache* cache) {
+                                      bool hitBlock = false;
+                                      return PxSceneQueryExt::raycastMultiple(scene, origin, unitDir, distance, PxHitFlags(flags), hitBuffer.data(), hbsize, hitBlock, filterData, nullptr, nullptr);                                      
+                                    }), allow_raw_pointers())
       .function("sweep", &PxScene::sweep, allow_raw_pointers());
 
-  class_<PxLocationHit>("PxLocationHit")
+  class_<PxQueryHit>("PxQueryHit")
+      .function("getShape", optional_override([](PxQueryHit &block){return block.shape;}), allow_raw_pointers())
+      .function("getActor", optional_override([](PxQueryHit &block){return block.actor;}), allow_raw_pointers());
+
+  class_<PxLocationHit, base<PxQueryHit>>("PxLocationHit")
       .property("position", &PxLocationHit::position)
       .property("normal", &PxLocationHit::normal)
       .property("distance", &PxLocationHit::distance);
-  class_<PxRaycastHit, base<PxLocationHit>>("PxRaycastHit").constructor<>()
-      .function("getShape", optional_override(
-                                [](PxRaycastHit &block){
-                                  return block.shape;
-                                }), allow_raw_pointers());
+  class_<PxRaycastHit, base<PxLocationHit>>("PxRaycastHit").constructor<>();  
+  register_vector<PxRaycastHit>("PxRaycastHitVector");
+  
   class_<PxRaycastCallback>("PxRaycastCallback")
       .property("block", &PxRaycastCallback::block)
       .property("hasBlock", &PxRaycastCallback::hasBlock)
@@ -384,15 +423,7 @@ EMSCRIPTEN_BINDINGS(physx)
 
   function("allocateRaycastHitBuffers", &allocateRaycastHitBuffers, allow_raw_pointers());
 
-  class_<PxSweepHit, base<PxLocationHit>>("PxSweepHit").constructor<>()
-      .function("getShape", optional_override(
-                                [](PxSweepHit &block){
-                                  return block.shape;
-                                }), allow_raw_pointers())
-      .function("getActor", optional_override(
-                                [](PxSweepHit &block){
-                                  return block.actor;
-                                }), allow_raw_pointers());
+  class_<PxSweepHit, base<PxLocationHit>>("PxSweepHit").constructor<>();
   class_<PxSweepCallback>("PxSweepCallback")
       .property("block", &PxSweepCallback::block)
       .property("hasBlock", &PxSweepCallback::hasBlock)
@@ -408,12 +439,21 @@ EMSCRIPTEN_BINDINGS(physx)
       .value("eMESH_MULTIPLE", PxHitFlag::Enum::eMESH_MULTIPLE);
 
   class_<PxQueryFilterData>("PxQueryFilterData").constructor<>()
-      .property("flags", &PxQueryFilterData::flags);
+      .function("setFlags", optional_override([](PxQueryFilterData& qf, const PxU16 f){ qf.flags = PxQueryFlags(f);}))      
+      .function("setWords", optional_override([](PxQueryFilterData& qf, const PxU32 f, const PxU16 i){ 
+          if (i == 0) qf.data.word0 = f;
+          else if(i == 1)qf.data.word1 = f;
+          else if(i == 2)qf.data.word2 = f;
+          else if(i == 3)qf.data.word3 = f;
+        }))
+      .property("data", &PxQueryFilterData::data);
   class_<PxQueryFlags>("PxQueryFlags").constructor<int>();
   enum_<PxQueryFlag::Enum>("PxQueryFlag")
       .value("eANY_HIT", PxQueryFlag::Enum::eANY_HIT)
       .value("eDYNAMIC", PxQueryFlag::Enum::eDYNAMIC)
       .value("eSTATIC", PxQueryFlag::Enum::eSTATIC)
+      .value("ePREFILTER", PxQueryFlag::Enum::ePREFILTER)
+      .value("ePOSTFILTER", PxQueryFlag::Enum::ePOSTFILTER)
       .value("eNO_BLOCK", PxQueryFlag::Enum::eNO_BLOCK);
   enum_<PxQueryHitType::Enum>("PxQueryHitType")
       .value("eNONE", PxQueryHitType::Enum::eNONE)
