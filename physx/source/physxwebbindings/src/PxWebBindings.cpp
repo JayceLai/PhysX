@@ -309,11 +309,26 @@ EMSCRIPTEN_BINDINGS(physx)
   function("PxD6JointCreate", &PxD6JointCreate, allow_raw_pointers());
 
   class_<PxJoint>("PxJoint")
+      .function("setActors", &PxJoint::setActors)
+      .function("setLocalPose", &PxJoint::setLocalPose)
+      .function("setBreakForce", &PxJoint::setBreakForce)
+      .function("setConstraintFlags", optional_override([](PxJoint& joint, PxU16 flags){
+        joint.setConstraintFlags(PxConstraintFlags(flags));
+      }))
       .function("release", &PxJoint::release);
   class_<PxSphericalJoint, base<PxJoint>>("PxSphericalJoint");
   class_<PxRevoluteJoint, base<PxJoint>>("PxRevoluteJoint");
   class_<PxFixedJoint, base<PxJoint>>("PxFixedJoint");
-  class_<PxDistanceJoint, base<PxJoint>>("PxDistanceJoint");
+  class_<PxDistanceJoint, base<PxJoint>>("PxDistanceJoint")
+      .function("getDistance", &PxDistanceJoint::getDistance)
+      .function("setMinDistance", &PxDistanceJoint::setMinDistance)
+      .function("setMaxDistance", &PxDistanceJoint::setMaxDistance)
+      .function("setTolerance", &PxDistanceJoint::setTolerance)
+      .function("setStiffness", &PxDistanceJoint::setStiffness)
+      .function("setDamping", &PxDistanceJoint::setDamping)
+      .function("setDistanceJointFlags", optional_override([](PxDistanceJoint& joint, PxU16 flags){
+        joint.setDistanceJointFlags(PxDistanceJointFlags(flags));
+      }));
   class_<PxPrismaticJoint, base<PxJoint>>("PxPrismaticJoint");
   class_<PxD6Joint, base<PxJoint>>("PxD6Joint");
 

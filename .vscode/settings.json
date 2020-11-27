@@ -7,6 +7,8 @@
         "/mnt/d/Github/physics/NvGameWorks/physx-js/node_modules/physx/physx/source/common/src",
     ],
     "files.associations": {
-        "random": "cpp"
+        "random": "cpp",
+        "__config": "cpp",
+        "__nullptr": "cpp"
     }
 }
