@@ -309,23 +309,55 @@ EMSCRIPTEN_BINDINGS(physx)
   function("PxD6JointCreate", &PxD6JointCreate, allow_raw_pointers());
 
   class_<PxJoint>("PxJoint")
-      .function("setActors", &PxJoint::setActors)
-      .function("setLocalPose", &PxJoint::setLocalPose)
+      .function("setActors", &PxJoint::setActors, allow_raw_pointers())
+      .function("setLocalPose", optional_override([](PxJoint& joint, PxU8 index, PxTransform& pos){
+        joint.setLocalPose(PxJointActorIndex::Enum(index), pos);
+      }))
       .function("setBreakForce", &PxJoint::setBreakForce)
+      .function("setConstraintFlag", optional_override([](PxJoint& joint, PxU16 flag, bool v){
+        joint.setConstraintFlag(PxConstraintFlag::Enum(flag), v);
+      }))
       .function("setConstraintFlags", optional_override([](PxJoint& joint, PxU16 flags){
         joint.setConstraintFlags(PxConstraintFlags(flags));
       }))
       .function("release", &PxJoint::release);
   class_<PxSphericalJoint, base<PxJoint>>("PxSphericalJoint");
-  class_<PxRevoluteJoint, base<PxJoint>>("PxRevoluteJoint");
-  class_<PxFixedJoint, base<PxJoint>>("PxFixedJoint");
+  class_<PxRevoluteJoint, base<PxJoint>>("PxRevoluteJoint")
+      .function("getAngle", &PxRevoluteJoint::getAngle)
+      .function("getVelocity", &PxRevoluteJoint::getVelocity)
+      // .function("setLimit", &PxRevoluteJoint::setLimit)
+      // .function("getLimit", &PxRevoluteJoint::getLimit)
+      .function("setDriveVelocity", &PxRevoluteJoint::setDriveVelocity)
+      .function("getDriveVelocity", &PxRevoluteJoint::getDriveVelocity)
+      .function("setDriveForceLimit", &PxRevoluteJoint::setDriveForceLimit)
+      .function("getDriveForceLimit", &PxRevoluteJoint::getDriveForceLimit)
+      .function("getDriveGearRatio", &PxRevoluteJoint::getDriveGearRatio)
+      .function("setDriveGearRatio", &PxRevoluteJoint::setDriveGearRatio)
+      .function("setRevoluteJointFlag", optional_override([](PxRevoluteJoint& joint, PxU16 flag, bool v){
+        joint.setRevoluteJointFlag(PxRevoluteJointFlag::Enum(flag), v);
+      }))
+      .function("setRevoluteJointFlags", optional_override([](PxRevoluteJoint& joint, PxU16 flags){
+        joint.setRevoluteJointFlags(PxRevoluteJointFlags(flags));
+      }))
+      .function("setProjectionLinearTolerance", &PxRevoluteJoint::setProjectionLinearTolerance)
+      .function("getProjectionLinearTolerance", &PxRevoluteJoint::getProjectionLinearTolerance)
+      .function("setProjectionAngularTolerance", &PxRevoluteJoint::setProjectionAngularTolerance)
+      .function("getProjectionAngularTolerance", &PxRevoluteJoint::getProjectionAngularTolerance);
+  class_<PxFixedJoint, base<PxJoint>>("PxFixedJoint")
+      .function("setProjectionLinearTolerance", &PxFixedJoint::setProjectionLinearTolerance)
+      .function("setProjectionAngularTolerance", &PxFixedJoint::setProjectionAngularTolerance);
   class_<PxDistanceJoint, base<PxJoint>>("PxDistanceJoint")
       .function("getDistance", &PxDistanceJoint::getDistance)
       .function("setMinDistance", &PxDistanceJoint::setMinDistance)
+      .function("getMinDistance", &PxDistanceJoint::getMinDistance)
       .function("setMaxDistance", &PxDistanceJoint::setMaxDistance)
+      .function("getMaxDistance", &PxDistanceJoint::getMaxDistance)
       .function("setTolerance", &PxDistanceJoint::setTolerance)
+      .function("getTolerance", &PxDistanceJoint::getTolerance)
       .function("setStiffness", &PxDistanceJoint::setStiffness)
+      .function("getStiffness", &PxDistanceJoint::getStiffness)
       .function("setDamping", &PxDistanceJoint::setDamping)
+      .function("getDamping", &PxDistanceJoint::getDamping)
       .function("setDistanceJointFlags", optional_override([](PxDistanceJoint& joint, PxU16 flags){
         joint.setDistanceJointFlags(PxDistanceJointFlags(flags));
       }));
